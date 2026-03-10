@@ -63,8 +63,13 @@ export type NewsPostVersion = {
      * Acts like a commit message.
      */
     message: string;
+
     /**
-     * Wether this versions content will be shown.
+     * Null means visible to public.
+     * String is the editor's reason for suppressing this version.
+     * The materialized current state on {@linkcode NewsPost} is always shown —
+     * moderation only applies to the version history view.
+     * Editors push a corrected version first, then moderate the bad one(s).
      */
     moderated: null | string;
     createdAt: Date;
