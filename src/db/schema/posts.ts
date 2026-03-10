@@ -55,7 +55,7 @@ export const newsPosts = pgTable("news_posts", {
 }, (table) => [
 	index("posts_search_index").using(
 		"gin",
-		sql`to_tsvector('turkish', ${table.title} || ' ' || ${table.content})`,
+		sql`to_tsvector('turkish', ${table.content})`,
 	),
 ]);
 
