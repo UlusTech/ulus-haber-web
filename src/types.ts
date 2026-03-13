@@ -1,111 +1,69 @@
-import type { PgSerial } from "drizzle-orm/pg-core";
+import type z from "zod";
 
-export enum NewsPostState {
-    /**
-     * Changed after {@linkcode UnderReview}
-     */
-    Corrected = "corrected",
-    /**
-     * Reviewing {@linkcode Uncertain}
-     */
-    UnderReview = "under_review",
-    /**
-     * Verifyed and proven to be true. Still, it can get {@linkcode UnderReview} and {@linkcode Corrected} and verifyed agein
-     */
-    Verified = "verified",
-    /**
-     * Not Reviewed. Maybe no way to correct or verify and cant get it {@linkcode UnderReview}
-     */
-    Uncertain = "uncertain",
-}
+// TODO: Move to tstd later.
+export type Satisfies<TCheck, TAgainst> = TCheck extends TAgainst ? TCheck
+    : never;
 
 /**
- * The canonical post record. Holds the current materialized state for fast reads.
- * All historical content lives in {@linkcode NewsPostVersion}.
+ * Constrains both the inferred output and the allowed input
+ * of a Zod schema to exactly `Shape`.
+ *
+ * Use with the TypeScript `satisfies` operator for compile-time
+ * exhaustiveness checking without any runtime overhead.
+ *
+ * Recommended to combine with {@link PrettifyZodInfer} for
+ * prettified inference results.
+ *
+ * @example
+ * ```ts
+ * import { z } from "zod/v4";
+ *
+ * type TestNested = { testString: string };
+ * type Test = { test: TestNested };
+ *
+ * const testNestedSchema = z.object({
+ *   testString: z.string(),
+ * }) satisfies ZodSatisfies<TestNested>;
+ *
+ * const testSchema = z.object({
+ *   test: testNestedSchema,
+ * }) satisfies ZodSatisfies<Test>;
+ * ```
+ *
+ * TODO: Move to tstd later.
  */
-export type NewsPost = {
-    /**
-     * See `serial` from `drizzle-orm/pg-core`. {@linkcode PgSerial}
-     */
-    id: number;
-    /**
-     * Publishers gives url of thier publisher server.
-     */
-    publisherUrl: URL;
-    /**
-     * Defaults {@linkcode NewsPostState.Uncertain}.
-     */
-    state: NewsPostState;
-    /**
-     * In CammonMark markdown format.
-     * Footnotes are rendered in an collapsed way. Treat them as sources or references.
-     */
-    content: string;
-    createdAt: Date;
-    updatedAt: Date;
-};
+export type ZodSatisfies<Shape> = z.ZodType<Shape, Shape>;
 
 /**
- * Full snapshot of a post at a point in time.
- * Every edit creates a new row — nothing is mutated.
- * To get current content, fetch the latest version by `postId`.
+ * “Prettify” a Zod schema’s inference so it collapses to exactly
+ * your declared `PrettyType`, improving hover-text readability
+ * and ensuring your inferred type matches your expectation.
+ *
+ * Requires your schema to also satisfy {@linkcode ZodSatisfies<PrettyType>}.
+ *
+ * @typeParam PrettyType — the type you want {@linkcode z.infer} to collapse to
+ * @typeParam SchemaType — your schema, constrained to {@linkcode z.ZodType<PrettyType, PrettyType>}
+ *
+ * @example
+ * ```ts
+ * import { z } from "zod/v4";
+ * type Nested = { a: number };
+ * type Outer = { nested: Nested };
+ *
+ * const nestedSchema = z.object({ a: z.number() }) satisfies ZodSatisfies<Nested>;
+ *
+ * const outerSchema = z.object({ nested: nestedSchema }) satisfies ZodSatisfies<
+ *   Outer
+ * >;
+ *
+ * type RawInfer = z.infer<typeof outerSchema>; // { nested: { a: number } }
+ * type PrettyInfer = PrettifyZodInfer<Outer, typeof outerSchema>;
+ * // now exactly Outer
+ * ```
+ *
+ * TODO: Move to tstd later.
  */
-export type NewsPostVersion = {
-    /**
-     * See `serial` from `drizzle-orm/pg-core`. {@linkcode PgSerial}
-     */
-    id: number;
-    postId: NewsPost["id"];
-    editorId: Editor["id"];
-    content: string;
-    state: NewsPostState;
-    isSignificant: boolean;
-    /**
-     * Acts like a commit message.
-     */
-    message: string;
-    /**
-     * Null means visible to public.
-     * String is the editor's reason for suppressing this version.
-     * The materialized current state on {@linkcode NewsPost} is always shown —
-     * moderation only applies to the version history view.
-     * Editors push a corrected version first, then moderate the bad one(s).
-     */
-    moderated: null | string;
-    createdAt: Date;
-};
-
-/**
- * Internal editors who can create and modify {@linkcode NewsPost}.
- * Accounts are created manually via seed script.
- * Auth is TOTP-based, no passwords stored.
- */
-export type Editor = {
-    /**
-     * See `serial` from `drizzle-orm/pg-core`. {@linkcode PgSerial}
-     */
-    id: number;
-    name: string;
-    /** Org email, e.g. `atilla@haber.ulus.org.tr` */
-    email: string;
-    /** TOTP secret for authenticator app. Set once on account creation. */
-    totpSecret: string;
-    createdAt: Date;
-};
-
-/**
- * Active editor sessions. The `id` itself is the token sent in requests.
- * Sessions expire after 7 days. Expired sessions are never auto-cleaned —
- * check `expiresAt` on every authenticated request.
- */
-export type Sessions = {
-    /** Random token. This is what the client sends as a bearer token. */
-    id: string;
-    editorId: Editor["id"];
-    /** Can change. Trusted ip will not have Rate-limiting. */
-    ip: string;
-    /** Never changes by desing. */
-    userAgent: string;
-    expiresAt: Date;
-    updatedAt: Date;
-};
+export type PrettifyZodInfer<
+    PrettyType,
+    SchemaType extends z.ZodType<PrettyType, PrettyType>,
+> = z.infer<SchemaType> extends PrettyType ? PrettyType : never;

@@ -13,8 +13,11 @@
 		"lint": "biome lint ."
 	},
 	"dependencies": {
+		"drizzle-orm": "^0.45.1",
+		"drizzle-zod": "^0.8.3",
 		"elysia": "latest",
-		"drizzle-orm": "latest"
+		"otplib": "^13.3.0",
+		"zod": "^4.3.6"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "latest",
