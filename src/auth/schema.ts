@@ -1,6 +1,6 @@
 import { createSelectSchema } from "drizzle-zod";
 import { editors } from "../db/schema/editors";
-import type { NewsPost } from "../posts/model";
+import type { NewsPost } from "../posts/schema";
 import type { ZodSatisfies } from "../types";
 
 /**
